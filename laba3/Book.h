@@ -2,6 +2,11 @@
 
 #include <string>
 
+// валидация идентификатора ISBN-10
+bool isValidIsbn10(const std::string&);
+// валидация идентификатора ISBN-13
+bool isValidIsbn13(const std::string&);
+
 class Book
 {
 private:
@@ -15,112 +20,65 @@ private:
 	Объект нельзя издать, если объект не готов к изданию (см. статус издания)
 	*/
 
-	struct Person {                            // поле (структура) ФИО первого автора
-		std::string name;                      // имя
-		std::string surname;                   // фамилия
-		std::string patronymic;                // отчество
+	struct Person {                                 // поле (структура) ФИО первого автора
+		std::string name = "";                      // имя
+		std::string surname = "";                   // фамилия
+		std::string patronymic = "";                // отчество
 	} author;
 
-	std::string title;                         // название книги
+	std::string title = "";                         // название книги
 
-	struct Metadata {                          // информация о содержании
-		unsigned short pages;                  // страницы
-		unsigned short chapters;               // главы
+	struct Metadata {                               // информация о содержании
+		unsigned short pages = 0;                   // страницы
+		unsigned short chapters = 0;                // главы
 	} content_data;
 
-	enum CoverType {                           // тип обложки
+	enum CoverType {                                // тип обложки
 		NONE, SOFT, HARD, EBOOK
-	} cover_type;
+	} cover_type = NONE;
 
-	enum EditionStatus {                       // статус издания
+	enum EditionStatus {                            // статус издания
 		UNREADY, READY, PUBLISHED
-	} edition_status;
+	};
 
-	struct EditionInfo {                       // информация об издании
-		unsigned short year;                   // год
-		std::string publisher;                 // издатель
-		std::string isbn;                      // ISBN
+	struct EditionInfo {                                 // информация об издании
+		enum EditionStatus edition_status = UNREADY;     // статус издания
+		unsigned short year = 0;                         // год
+		std::string publisher = "";                      // издатель
+		std::string isbn = "";                           // ISBN
 	} edition_info;
-
-	/* КОНСТАТНТЫ КЛАССА */ //!!11!!!!11!11 значения по умолчанию можно сразу задавать в полях
-
-	const std::string EMPTY_STR = ""; // значение по умолчанию полей строкового типа
-	const unsigned short EMPTY_VALUE = 0; // значение по умолчанию полей целого типа
-	const enum CoverType EMPTY_COVER = NONE; // значение по умолчанию для типа обложки
-	const enum EditionStatus EMPTY_STATUS = UNREADY; // значение по умолчанию для статуса издания
-	
-	/* ИНФОРМАЦИЯ О ФУНКЦИЯХ СТАТУСА ИЗДАНИЯ
-	эти функции вызываются функциями из открытой части класса
-	для проверки возможности изменения полей и для обновления статуса выпуска
-	*/
-
-	// обновление статуса издания в зависимости от заполненности полей
-	void update_edit_status();
-	// получение статуса издания для сеттеров (для корректной установки значений)
-	enum EditionStatus get_edit_status() const;
-
-	/* ИНФОРМАЦИЯ О СЕТТЕРАХ
-	установщики значений полей с проверкой значений, используются функциями из открытой части класса
-	выбрасывают исключения в случае передачи некорректных значений, оставляют значения полей которые были до вызова функции
-	сеттеры работают только для невыпущенных книг !11!1!1!1!1
-	сеттеры обновляют значение статуса издания !!!1!!1!111 должны это делать функции из открытой части класса
-	*/
-	
-	// установить значение автора книги
-	void set_author(struct Person);
-	// установить значение название книги
-	void set_title(std::string);
-	// установить значение информации о содержании
-	void set_content_data(struct Metadata);
-	// установить значение типа обложки
-	void set_cover_type(enum CoverType);
-	// установить значение информации об издании
-	void set_edit_info(enum EditionStatus);
-	
-	/* ИНФОРМАЦИЯ О ГЕТТЕРАХ
-	геттеры используются фукнциями из открытой части класса для доступа к значениям полей объекта
-	*/
-
-	// получить значение автора книги
-	struct Person get_author() const;
-	// получить значение название книги
-	std::string get_title() const;
-	// получить значение информации о содержании
-	struct Metadata get_content_data() const;
-	// получить значение типа обложки
-	enum CoverType get_cover_type() const;
-	// получить значение информации об издании
-	enum EditionStatus get_edit_info() const;
-
-	/* ПРОЧИЕ ФУНКЦИИ */
 
 	// инициализация объекта значениями по умолчанию
 	void init();
+	// обновление и возврат статуса издания в зависимости от заполненности полей
+	enum EditionStatus getEditionStatus();
 	// валидация идентификатора ISBN (для "издающих" методов)
-	bool is_valid_isbn() const;
-
-
+	bool isValidIsbn() const;
+	// проверка информации об издании
+	bool checkEditionInfo();
 
 public:
 
-	/* ИНФОРМАЦИЯ О КОНСТРУКТОРАХ
+	/*ИНФОРМАЦИЯ О КОНСТРУКТОРАХ
 	Конструкторы не могут оставить часть значений "по умолчанию" у полей, за которые они отвечают
 	При передач некорректных значений конструктору, все поля получат значения по умолчанию
+
+	+++ обновляют значение статуса издания
 	*/
 
 	// конструктор без параметров, создает объект с значениями по умолчанию
 	Book();
 	// конструктор с параметрами для книги готовой к изданию (нет только информации об издании)
 	Book(struct Person, std::string, struct Metadata, enum CoverType);
-	// конструктор с параметрами для изданной книги (есть все значения)
-	Book(struct Person, std::string, struct Metadata, enum CoverType, enum EditionStatus);
+	// конструктор с параметрами для изданной книги (есть все значения) +++издающий
+	Book(struct Person, std::string, struct Metadata, enum CoverType, struct EditionInfo);
 
-	/* ПОЛЬЗОВАТЕЛЬСКИЕ ФУНКЦИИ */
+	/* ИНФОРМАЦИЯ О СЕТТЕРАХ
+	выбрасывают исключения в случае передачи некорректных значений, оставляют значения полей которые были до вызова функции
+	сеттеры работают только для невыпущенных книг
 
-	// Вывод информации о книге в консоль
-	void print() const;
-	// Возврат среднего количества страниц на главу
-	unsigned short pagesPerChapter() const;
+	+++ обновляют значение статуса издания
+	*/
 
 	// установить значение автора книги
 	void setAuthor(struct Person);
@@ -130,13 +88,20 @@ public:
 	void setContentData(struct Metadata);
 	// установить значение типа обложки
 	void setCoverType(enum CoverType);
-	// установить значение информации об издании + проверка статуса
+	// установить значение информации об издании +++издающий
 	void publishBook(enum EditionStatus);
 
+	/* ПОЛЬЗОВАТЕЛЬСКИЕ ФУНКЦИИ */
+
+	// Вывод информации о книге в консоль
+	void print() const;
+	// Возврат среднего количества страниц на главу
+	double pagesPerChapter() const;
 	// получить значение автора книги
 	struct Person getAuthor() const;
 	// получить значение название книги
 	std::string getTitle() const;
 	// получить значение типа обложки
 	enum CoverType getCoverType() const;
+
 };

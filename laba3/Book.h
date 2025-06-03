@@ -2,11 +2,6 @@
 
 #include <string>
 
-// валидация идентификатора ISBN-10
-bool isValidIsbn10(const std::string&);
-// валидация идентификатора ISBN-13
-bool isValidIsbn13(const std::string&);
-
 class Book
 {
 private:
@@ -42,7 +37,7 @@ private:
 	};
 
 	struct EditionInfo {                                 // информация об издании
-		enum EditionStatus edition_status = UNREADY;     // статус издания
+		enum EditionStatus status = UNREADY;     // статус издания
 		unsigned short year = 0;                         // год
 		std::string publisher = "";                      // издатель
 		std::string isbn = "";                           // ISBN
@@ -54,8 +49,10 @@ private:
 	enum EditionStatus getEditionStatus();
 	// валидация идентификатора ISBN (для "издающих" методов)
 	bool isValidIsbn() const;
-	// проверка информации об издании
-	bool checkEditionInfo();
+	// валидация идентификатора ISBN-10
+	static bool isValidIsbn10(const std::string&);
+	// валидация идентификатора ISBN-13
+	static bool isValidIsbn13(const std::string&);
 
 public:
 
@@ -89,7 +86,7 @@ public:
 	// установить значение типа обложки
 	void setCoverType(enum CoverType);
 	// установить значение информации об издании +++издающий
-	void publishBook(enum EditionStatus);
+	void publishBook(struct EditionInfo);
 
 	/* ПОЛЬЗОВАТЕЛЬСКИЕ ФУНКЦИИ */
 

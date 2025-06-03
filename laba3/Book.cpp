@@ -11,44 +11,34 @@ void Book::init() {
     this->content_data.chapters = 0;
     this->content_data.pages = 0;
     this->cover_type = NONE;
-    this->edition_info.edition_status = UNREADY;
+    this->edition_info.status = UNREADY;
     this->edition_info.publisher = "";
     this->edition_info.isbn = "";
     this->edition_info.year = 0;
 
 }
+
 // обновление и возврат статуса издания в зависимости от заполненности полей
 enum Book::EditionStatus Book::getEditionStatus() {
-	if (this->edition_info.year != 0 &&
-        this->edition_info.publisher != "" &&
-        this->edition_info.isbn != "" ) { // если информация об издании заполнена, книга считается выпущенной
-		this->edition_info.edition_status = PUBLISHED;
-		return PUBLISHED;
-	}
-	if (this->author.name != "" &&
-	    this->author.surname != "" &&
-	    this->author.patronymic != "" &&
-		this->title != "" &&
-		this->content_data.chapters != 0 &&
-		this->content_data.pages != 0 &&
-		this->cover_type != NONE) { // если ни одно поле не имеет значение по умолчанию, книга считается готовой к изданию
-		this->edition_info.edition_status = READY;
-		return READY;
-	}
-	this->edition_info.edition_status = UNREADY; // в противном случае книга считается не готовой
-	return UNREADY;
-}
-// проверка информации об издании
-bool Book::checkEditionInfo() {
-    if (this->edition_info.edition_status == READY && 
-        this->edition_info.year > 2000 &&
+    if (this->edition_info.year > 2000 &&
         this->edition_info.year < 3000 &&
         this->edition_info.publisher != "" &&
-        this->isValidIsbn()) {
-        this->edition_info.edition_status = PUBLISHED;
-        return true;
+        this->isValidIsbn()) { // если информация об издании заполнена, книга считается выпущенной
+        this->edition_info.status = PUBLISHED;
+        return PUBLISHED;
     }
-    return false;
+    if (this->author.name != "" &&
+        this->author.surname != "" &&
+        this->author.patronymic != "" &&
+        this->title != "" &&
+        this->content_data.chapters != 0 &&
+        this->content_data.pages != 0 &&
+        this->cover_type != NONE) { // если ни одно поле не имеет значение по умолчанию, книга считается готовой к изданию
+        this->edition_info.status = READY;
+        return READY;
+    }
+    this->edition_info.status = UNREADY; // в противном случае книга считается не готовой
+    return UNREADY;
 }
 
 // валидация идентификатора ISBN (для "издающих" методов)
@@ -65,16 +55,17 @@ bool Book::isValidIsbn() const {
 
     // Проверяем длину
     if (cleanIsbn.length() == 10) {
-        return isValidIsbn10(cleanIsbn);
+        return this->Book::isValidIsbn10(cleanIsbn);
     }
     else if (cleanIsbn.length() == 13) {
-        return isValidIsbn13(cleanIsbn);
+        return this->Book::isValidIsbn13(cleanIsbn);
     }
 
     return false;
 }
+
 // валидация идентификатора ISBN-10
-bool isValidIsbn10(const std::string& isbn) {
+bool Book::isValidIsbn10(const std::string& isbn){
     // ISBN-10 должен содержать 9 цифр + 1 цифру или X
     if (isbn.length() != 10) return false;
 
@@ -98,8 +89,9 @@ bool isValidIsbn10(const std::string& isbn) {
 
     return (sum % 11 == 0);
 }
+
 // валидация идентификатора ISBN-13
-bool isValidIsbn13(const std::string& isbn) {
+bool Book::isValidIsbn13(const std::string& isbn) {
     // ISBN-13 должен содержать 13 цифр и начинаться с 978 или 979
     if (isbn.length() != 13) return false;
     if (isbn.substr(0, 3) != "978" && isbn.substr(0, 3) != "979") {
@@ -125,6 +117,7 @@ bool isValidIsbn13(const std::string& isbn) {
 Book::Book() {
     this->init();
 }
+
 // конструктор с параметрами для книги готовой к изданию (нет только информации об издании)
 Book::Book(struct Person _author, std::string _title, struct Metadata _content_data, enum CoverType _cover_type) {
     this->author = _author;
@@ -137,6 +130,7 @@ Book::Book(struct Person _author, std::string _title, struct Metadata _content_d
         throw std::invalid_argument("Error, values are incorrect.");
     }
 }
+
 // конструктор с параметрами для изданной книги (есть все значения) +++издающий
 Book::Book(struct Person _author, std::string _title, struct Metadata _content_data, enum CoverType _cover_type, struct EditionInfo _edition_status) {
     this->author = _author;
@@ -149,34 +143,142 @@ Book::Book(struct Person _author, std::string _title, struct Metadata _content_d
         throw std::invalid_argument("Error, mandatory values are empty.");
     }
     this->edition_info = _edition_status;
-    if (this->checkEditionInfo() == false) {
+    if (this->getEditionStatus() != PUBLISHED) {
         this->init();
         throw std::invalid_argument("Error, invalid edition info.");
     }
 }
 
 // установить значение автора книги
-void Book::setAuthor(struct Person) {
+void Book::setAuthor(struct Person _author) {
+    if (this->edition_info.status == PUBLISHED) {
+        throw std::logic_error("Error. You can't change the fields of a published book.");
+    }
+    if (_author.name == "" ||
+        _author.surname == "" ||
+        _author.patronymic == "") throw std::invalid_argument("Error, you cant set empty author info.");
 
+    this->author = _author;
+    this->getEditionStatus();
 }
-// установить значение название книги
-void Book::setTitle(std::string){}
-// установить значение информации о содержании
-void Book::setContentData(struct Metadata){}
-// установить значение типа обложки
-void Book::setCoverType(enum CoverType){}
-// установить значение информации об издании +++издающий
-void Book::publishBook(enum EditionStatus) {
 
+// установить значение название книги
+void Book::setTitle(std::string _title) {
+    if (this->edition_info.status == PUBLISHED) {
+        throw std::logic_error("Error. You can't change the fields of a published book.");
+    }
+    if (_title == "") throw std::invalid_argument("Error, you cant set empty title.");
+    else {
+        this->title = _title;
+        this->getEditionStatus();
+    }
+}
+
+// установить значение информации о содержании
+void Book::setContentData(struct Metadata _content_data) {
+    if (this->edition_info.status == PUBLISHED) {
+        throw std::logic_error("Error. You can't change the fields of a published book.");
+    }
+    if (_content_data.pages == 0 && _content_data.chapters == 0) {
+        // Допустимо (например, книга ещё не готова)
+    } 
+    else if (_content_data.pages == 0 || _content_data.chapters == 0) {
+        throw std::invalid_argument("Error: pages and chapters must both be zero or both non-zero.");
+    }
+
+    this->content_data = _content_data;
+    this->getEditionStatus();
+}
+
+// установить значение типа обложки
+void Book::setCoverType(enum CoverType _cover_type) {
+    if (this->edition_info.status == PUBLISHED) {
+        throw std::logic_error("Error. You can't change the fields of a published book.");
+    }
+    if (_cover_type == NONE) {
+        throw std::invalid_argument("Error: cover type cannot be NONE for a ready book.");
+    }
+    else {
+        this->cover_type = _cover_type;
+        this->getEditionStatus();
+    }
+}
+
+// установить значение информации об издании +++издающий
+void Book::publishBook(struct EditionInfo _edition_info) {
+    if (this->edition_info.status == PUBLISHED) {
+        throw std::logic_error("Error. You can't change the fields of a published book.");
+    }
+    if (this->getEditionStatus() != READY) {
+        throw std::logic_error("Error. The book is not ready for publishing.");
+    }
+
+    EditionInfo old_info = this->edition_info; // Сохраняем предыдущее состояние
+    this->edition_info = _edition_info;
+
+    if (this->getEditionStatus() != PUBLISHED) {
+        this->edition_info = old_info; // Восстанавливаем, если валидация не прошла
+        throw std::invalid_argument("Error, invalid edition info.");
+    }
 }
 
 // Вывод информации о книге в консоль
-void Book::print() const {}
+void Book::print() const {
+    std::cout << "Title: " << title << std::endl;
+
+    std::cout << "Author: ";
+    if (author.name == "") std::cout << "Not stated yet" << std::endl;
+    else std::cout  << author.name << " " << author.patronymic << " " << author.surname << std::endl;
+
+    std::cout << "Content: " << content_data.chapters << " chapters, " << content_data.pages << " pages" << std::endl;
+    std::cout << "Book type: ";
+    switch (cover_type) {
+    case NONE:
+    {
+        std::cout << "not stated";
+        break;
+    }
+    case SOFT:
+    {
+        std::cout << "soft cover";
+        break;
+    }
+    case HARD:
+    {
+        std::cout << "hard cover";
+        break;
+    }
+    case EBOOK:
+    {
+        std::cout << "e-book";
+        break;
+    }
+    }
+    std::cout << std::endl;
+    if (edition_info.status == PUBLISHED) {
+        std::cout << "Published in " << edition_info.year << " by " << edition_info.publisher << ". ISBN: " << edition_info.isbn << std::endl;
+    }
+}
+
 // Возврат среднего количества страниц на главу
-double Book::pagesPerChapter() const {}
+double Book::pagesPerChapter() const {
+    if (content_data.pages == 0 || content_data.chapters == 0) {
+        return 0.0;
+    }
+    return (double)content_data.pages / content_data.chapters;
+}
+
 // получить значение автора книги
-struct Book::Person Book::getAuthor() const {}
+struct Book::Person Book::getAuthor() const {
+    return this->author;
+}
+
 // получить значение название книги
-std::string Book::getTitle() const {}
+std::string Book::getTitle() const {
+    return this->title;
+}
+
 // получить значение типа обложки
-enum Book::CoverType Book::getCoverType() const {}
+enum Book::CoverType Book::getCoverType() const {
+    return this->cover_type;
+}
